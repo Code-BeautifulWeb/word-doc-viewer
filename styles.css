@@ -27,37 +27,36 @@
   color: var(--text-error);
 }
 
-/* Content Area & Paper Envelope */
+/* Content Area - Uniform equal gap (1rem) on Top, Right, Bottom, and Left */
 .word-doc-viewer-content {
   flex: 1;
   width: 100%;
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 1.5rem 1rem;
+  padding: 1rem;
   box-sizing: border-box;
 }
 
 .word-doc-viewer-content .docx-wrapper {
-  background: transparent !important;
-  padding: 0 !important;
+  background: transparent;
+  padding: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 1.5rem;
+  align-items: stretch;
+  gap: 1rem;
+  box-sizing: border-box;
 }
 
-/* Authentic Paper Page Styling with Full Responsive Width */
+/* Full-Width Authentic Paper Page Styling */
 .word-doc-viewer-content .docx-wrapper > section.docx {
-  width: 100% !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-  background-color: #ffffff !important;
-  color: #111111 !important;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: #ffffff;
+  color: #111111;
   border-radius: 4px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
-  padding: 2.5rem 3rem !important;
-  margin: 0 auto !important;
-  min-height: auto !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  padding: 2rem 2.5rem;
+  margin: 0;
+  min-height: auto;
 }
 
 /* Direct Text Selection */
@@ -69,13 +68,13 @@
 
 /* Responsive Media, Tables, & Images */
 .word-doc-viewer-content .docx-render img {
-  max-width: 100% !important;
-  height: auto !important;
+  max-width: 100%;
+  height: auto;
   display: inline-block;
 }
 
 .word-doc-viewer-content .docx-render table {
-  max-width: 100% !important;
+  max-width: 100%;
   border-collapse: collapse;
   margin: 0.8em 0;
 }

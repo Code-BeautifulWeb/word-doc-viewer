@@ -63,8 +63,8 @@ export class DocxDocumentView extends FileView {
       const renderOptions: Partial<Options> = {
         className: "docx-render",
         inWrapper: true,
-        ignoreWidth: false,
-        ignoreHeight: false,
+        ignoreWidth: true,
+        ignoreHeight: true,
         ignoreFonts: false,
         breakPages: true,
         useBase64URL: false,

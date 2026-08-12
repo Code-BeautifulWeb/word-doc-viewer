@@ -6757,8 +6757,8 @@ var DocxDocumentView = class extends import_obsidian.FileView {
       const renderOptions = {
         className: "docx-render",
         inWrapper: true,
-        ignoreWidth: false,
-        ignoreHeight: false,
+        ignoreWidth: true,
+        ignoreHeight: true,
         ignoreFonts: false,
         breakPages: true,
         useBase64URL: false,
