@@ -74,6 +74,7 @@ export class DocxDocumentView extends FileView {
       await renderAsync(arrayBuffer, renderTarget, undefined, renderOptions);
 
       this.normalizeRenderedElementWidths(renderTarget);
+      this.fixBulletGlyphs(renderTarget);
       this.trackEmbeddedBlobUrls(renderTarget);
     } catch (error) {
       this.documentContainerEl.empty();
@@ -99,6 +100,16 @@ export class DocxDocumentView extends FileView {
         el.style.marginRight = "0px";
       }
     });
+  }
+
+  private fixBulletGlyphs(root: HTMLElement): void {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let node: Node | null;
+    while ((node = walker.nextNode())) {
+      if (node.nodeValue) {
+        node.nodeValue = node.nodeValue.replace(/[\uF000-\uF0FF]/g, "•");
+      }
+    }
   }
 
   private trackEmbeddedBlobUrls(root: HTMLElement): void {

@@ -6766,6 +6766,7 @@ var DocxDocumentView = class extends import_obsidian.FileView {
       };
       await renderAsync(arrayBuffer, renderTarget, void 0, renderOptions);
       this.normalizeRenderedElementWidths(renderTarget);
+      this.fixBulletGlyphs(renderTarget);
       this.trackEmbeddedBlobUrls(renderTarget);
     } catch (error) {
       this.documentContainerEl.empty();
@@ -6790,6 +6791,15 @@ var DocxDocumentView = class extends import_obsidian.FileView {
         el.style.marginRight = "0px";
       }
     });
+  }
+  fixBulletGlyphs(root) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let node;
+    while (node = walker.nextNode()) {
+      if (node.nodeValue) {
+        node.nodeValue = node.nodeValue.replace(/[\uF000-\uF0FF]/g, "\u2022");
+      }
+    }
   }
   trackEmbeddedBlobUrls(root) {
     const imgElements = root.querySelectorAll("img[src^='blob:']");
