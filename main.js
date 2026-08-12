@@ -6789,6 +6789,14 @@ var _DocxDocumentView = class _DocxDocumentView extends import_obsidian.FileView
         el.style.marginRight = "0px";
       }
     });
+    const tableCellElements = root.querySelectorAll(
+      "section.docx td, section.docx th, section.docx col, section.docx colgroup"
+    );
+    tableCellElements.forEach((el) => {
+      if (el.style.width) {
+        el.style.removeProperty("width");
+      }
+    });
   }
   fixBulletGlyphs(root) {
     const doc = root.ownerDocument || document;
@@ -6824,7 +6832,7 @@ _DocxDocumentView.RENDER_OPTIONS = {
   ignoreHeight: true,
   ignoreFonts: false,
   breakPages: true,
-  useBase64URL: false,
+  useBase64URL: true,
   trimXmlDeclaration: true
 };
 var DocxDocumentView = _DocxDocumentView;

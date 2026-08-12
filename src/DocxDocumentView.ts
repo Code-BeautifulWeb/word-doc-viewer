@@ -15,7 +15,7 @@ export class DocxDocumentView extends FileView {
     ignoreHeight: true,
     ignoreFonts: false,
     breakPages: true,
-    useBase64URL: false,
+    useBase64URL: true,
     trimXmlDeclaration: true,
   };
 
@@ -92,6 +92,7 @@ export class DocxDocumentView extends FileView {
   }
 
   private normalizeRenderedElementWidths(root: HTMLElement): void {
+    // 1. Normalize block-level containers (paragraphs, divs, tables, articles)
     const blockElements = root.querySelectorAll<HTMLElement>(
       "section.docx p, section.docx div, section.docx table, section.docx article"
     );
@@ -101,6 +102,17 @@ export class DocxDocumentView extends FileView {
       }
       if (el.style.marginRight) {
         el.style.marginRight = "0px";
+      }
+    });
+
+    // 2. Strip fixed inline pixel widths from table cells & columns (td, th, col, colgroup)
+    // allowing browser table-layout: auto to calculate fluid column widths on mobile viewports.
+    const tableCellElements = root.querySelectorAll<HTMLElement>(
+      "section.docx td, section.docx th, section.docx col, section.docx colgroup"
+    );
+    tableCellElements.forEach((el) => {
+      if (el.style.width) {
+        el.style.removeProperty("width");
       }
     });
   }

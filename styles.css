@@ -5,6 +5,7 @@
   width: 100%;
   overflow-y: auto;
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   background-color: var(--background-primary);
   box-sizing: border-box;
 }
@@ -55,6 +56,16 @@
   min-height: auto;
 }
 
+/* Mobile responsive padding & touch layout */
+@media (max-width: 768px), body.is-mobile {
+  .word-doc-viewer-content {
+    padding: 0.25rem;
+  }
+  .word-doc-viewer-content .docx-wrapper > section.docx {
+    padding: 1rem 0.75rem !important;
+  }
+}
+
 .word-doc-viewer-content .docx-render section.docx > * {
   width: 100% !important;
   max-width: 100% !important;
@@ -64,12 +75,32 @@
 
 .word-doc-viewer-content .docx-render p,
 .word-doc-viewer-content .docx-render div,
-.word-doc-viewer-content .docx-render article,
-.word-doc-viewer-content .docx-render table {
+.word-doc-viewer-content .docx-render article {
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
   margin-right: 0 !important;
+}
+
+/* Fluid Responsive Tables & Table Cells */
+.word-doc-viewer-content .docx-render table {
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: auto !important;
+  border-collapse: collapse;
+  margin: 0.8em 0;
+  box-sizing: border-box !important;
+  margin-right: 0 !important;
+}
+
+.word-doc-viewer-content .docx-render td,
+.word-doc-viewer-content .docx-render th,
+.word-doc-viewer-content .docx-render col,
+.word-doc-viewer-content .docx-render colgroup {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .word-doc-viewer-content .docx-render,
@@ -85,12 +116,8 @@
   display: inline-block;
 }
 
-.word-doc-viewer-content .docx-render table {
-  max-width: 100% !important;
-  border-collapse: collapse;
-  margin: 0.8em 0;
-}
-
 .word-doc-viewer-content .docx-render p {
   line-height: inherit;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
