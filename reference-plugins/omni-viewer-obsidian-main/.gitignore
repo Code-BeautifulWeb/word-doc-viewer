@@ -1,6 +1,0 @@
-node_modules/
-main.js
-*.map
-.DS_Store
-data.json
-src/generated/
