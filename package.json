@@ -1,0 +1,29 @@
+{
+  "name": "word-doc-viewer",
+  "version": "1.0.0",
+  "description": "Lightweight Microsoft Word (.docx) document viewer for Obsidian.",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
+  },
+  "keywords": [
+    "obsidian",
+    "obsidian-plugin",
+    "docx",
+    "word",
+    "viewer"
+  ],
+  "author": "Antigravity",
+  "license": "MIT",
+  "dependencies": {
+    "docx-preview": "^0.3.7",
+    "jszip": "^3.10.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "esbuild": "^0.20.0",
+    "obsidian": "^1.5.7",
+    "typescript": "^5.3.3"
+  }
+}

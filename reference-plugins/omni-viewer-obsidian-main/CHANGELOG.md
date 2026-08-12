@@ -1,0 +1,167 @@
+# Changelog
+
+## [0.6.0] - 2026-08-07
+
+### Added
+- Added an ONNX viewer for `.onnx` on desktop and mobile, backed by `omni-viewer-core`: connected computation graph with node inspection, searchable node/tensor/input-output tables, model metadata and opsets, and JSON copy. Weight payloads are not decoded.
+- Added a GGUF viewer for `.gguf` on desktop and mobile: summary cards, searchable tensor and metadata tables, structure preview, and JSON copy. Tensor payload bytes are never read.
+
+### Changed
+- Updated `omni-viewer-core` from 0.12.1 to 0.13.0.
+
+### Performance
+- GGUF models are inspected through filesystem range reads on desktop, so only the header, metadata, and tensor index are loaded. A 256 MiB model reads 2 MB (0.75%). Mobile has no filesystem access and falls back to a whole-file read, limited to 512 MB.
+
+### Build
+- Resolved `@huggingface/gguf` to its browser build in `esbuild.config.mjs`. Its `exports` entry is the Node build, which imports `fs/promises` `open`/`stat` through a local-file helper the GGUF adapter never uses, since the adapter always supplies its own range `fetch`.
+- Declared `@huggingface/gguf` as a direct dependency because the build now resolves it by path.
+
+## [0.5.2] - 2026-08-03
+
+### Changed
+- Moved the Word viewer's core styling into the release `styles.css` and mounted the viewer in scoped light DOM so Obsidian can load its CSS through the supported plugin stylesheet path.
+- Reworked Word printing to use a temporary top-level print root and static `@media print` rules while preserving document images, page layout, and zoom reset behavior.
+
+### Fixed
+- Resolved the remaining Obsidian Community plugin review error caused by creating and attaching a runtime `<style>` element for the Word print view.
+
+### Build
+- Extended the deterministic stylesheet build step to scope and bundle `omni-viewer-core` Word CSS without leaking its standalone page selectors into Obsidian.
+
+## [0.5.1] - 2026-08-03
+
+### Changed
+- Updated `omni-viewer-core` from 0.12.0 to 0.12.1.
+- Moved the LaTeX viewer's core and KaTeX styling into the release `styles.css`: the viewer now mounts in scoped light DOM, and the build embeds its 20 woff2 fonts while limiting KaTeX selectors to Omni Viewer.
+- Replaced source-level imports of Node.js built-ins (`fs`, `path`, `os`, `child_process`, `zlib`, `stream/promises`, and `buffer`) with explicit mobile-compatible shims whose native access is guarded by `Platform.isDesktopApp`.
+- Removed informational console logging from core-viewer adapters while retaining error and warning reporting.
+
+### Fixed
+- Resolved the Obsidian Community plugin review error caused by creating and attaching runtime `<style>` elements in the LaTeX viewer.
+- Declared `emf-converter` as a direct dependency because the PowerPoint adapter imports it directly.
+- Made asynchronous custom iframe message handlers part of the host contract and awaited them, preventing rejected handler promises from being dropped.
+- Updated the `setImmediate` shim to use `window`, `window.setTimeout()`, and `window.clearTimeout()` for Obsidian pop-out window compatibility.
+- Replaced review-flagged DOM creation and unnecessary type assertions where the original types were already accepted.
+
+### Build
+- Added a deterministic stylesheet build step that combines the maintained plugin CSS, `omni-viewer-core` LaTeX CSS, scoped KaTeX CSS, and embedded fonts into the release `styles.css`.
+- Removed KaTeX CSS and fonts from the JavaScript asset bundle now that Obsidian loads them from `styles.css`.
+
+## [0.5.0] - 2026-08-02
+
+### Added
+- Added a LaTeX viewer for `.tex`, `.latex`, and `.ltx` on desktop and mobile, backed by `omni-viewer-core`: document outline, preview/split/source modes, editing and writeback, KaTeX math, tables/theorems, references, and vault-contained `\\input`/`\\include` resolution. The preview explicitly preserves unsupported constructs as source because it is not a full TeX compiler.
+- Bundled KaTeX CSS and woff2 fonts into the single-file plugin release and sanitised its generated math markup with DOMPurify.
+
+### Changed
+- Updated `omni-viewer-core` from 0.9.0 to 0.12.0 while pinning `hyparquet` 1.26.2 to keep the dependency upgrade isolated.
+- Parquet now inherits the core's 1 MiB clipboard guard, sort indicator, copy toast, and footer-metadata reuse for lazy loading.
+
+### Fixed
+- Preserved unsaved LaTeX edits across Obsidian refresh/writeback events through the core's official `isDirty()` handle contract, including edits made while a save is in flight.
+- Restored LaTeX `table` and `figure` float bodies (including nested `tabular` content) via the core 0.11.1 regression fix.
+- Removed the duplicate Obsidian success notice after Parquet copy; core 0.11 now owns the confirmation toast.
+
+## [0.4.0] - 2026-07-26
+
+### Changed
+- Migrated the Parquet, TOML, Mermaid, and PlantUML viewers to the shared `omni-viewer-core` rendering engine, mounting the core viewer directly into the view instead of the template path (continuing the CSV/PDF/PowerPoint/archive migrations).
+- Parquet: large files again load lazily — the viewer now reads through random-access range reads on desktop, materializing only the footer and the requested row-group pages instead of loading the whole file into memory, so files above 50 MB no longer preload every row. Small files behave as before, and the core viewer adds table/JSON export to a file through the system save dialog.
+- TOML: the core viewer replaces the read-only tree with an editable source panel that writes changes back to the file, alongside tree/flatten/JSON panels, scoped search, expand/collapse, and copy path/value/JSON — on both desktop and mobile.
+- Mermaid and PlantUML: the core viewer adds a live source editor with write-back to the file, theme-aware rendering, zoom, and copy/save of the diagram. The mermaid and PlantUML renderers are bundled explicitly (added as direct `mermaid` and `puml-canvas-js` dependencies) so esbuild can follow them into the single-file plugin bundle.
+- PowerPoint: embedded EMF/WMF metafile images are now rasterized to PNG and rendered inline (desktop and mobile) instead of falling back to a placeholder.
+- Updated `omni-viewer-core` to 0.9.0.
+
+### Removed
+- Deleted the viewer code the core migrations replaced: the Parquet, TOML, Mermaid, and PlantUML templates, the standalone TOML parser, the filesystem Parquet reader, and the `hyparquet-node` type shim.
+
+### Build
+- Attest `main.js` and `styles.css` in the release workflow to publish build provenance.
+
+## [0.3.2] - 2026-07-23
+
+### Fixed
+- Bundled JSZip from its source entry so the existing safe Promise and `setImmediate` shims replace legacy browser fallbacks that dynamically created `<script>` elements and failed Obsidian's release security scan.
+
+## [0.3.1] - 2026-07-22
+
+### Changed
+- Updated `omni-viewer-core` to 0.7.0.
+- Moved mobile viewer overrides into the plugin's `styles.css` instead of injecting a runtime `<style>` element.
+
+### Fixed
+- Replaced direct Word print-view style assignments with CSS classes to comply with Obsidian's plugin review rules.
+
+## [0.3.0] - 2026-07-22
+
+### Added
+- Added a Safetensors viewer backed by `omni-viewer-core`, including tensor/metadata tables, search, structure preview, and JSON copy.
+- Added vault-backed mobile viewers, save-as, PDF file selection, and ZIP extraction.
+
+### Changed
+- Updated `omni-viewer-core` to 0.6.0.
+- Added a shared desktop/mobile bundle with browser-compatible Node shims.
+- Replaced the share service's Node HTTPS transport with Obsidian's cross-platform request API.
+- Added responsive and touch-oriented viewer overrides for Android and iOS.
+
+### Fixed
+- Prevented mobile image exports from silently overwriting existing vault files and rejected folder paths in export names.
+- Connected mobile audio download and region-export actions to vault-backed save-as handling.
+
+## [0.2.0] - 2026-07-19
+
+### Added
+- Archive: inline preview for audio, video, and image entries. Previously only plain-text entries could be previewed and every other entry was reported as unsupported.
+- Archive: save an individual entry to disk from the viewer.
+
+### Changed
+- Migrated the PowerPoint and archive viewers to the shared `omni-viewer-core` rendering engine, mounting the core viewer directly into the view instead of the iframe/template path (continuing the CSV/PDF migration from 0.1.2).
+- Archive: listing, entry preview, and save all stream through a path-based decoder, so multi-GB archives are inspected and extracted without loading the archive into memory.
+- PowerPoint: parsing and rendering now come from the core; the LibreOffice (`soffice`) PDF fallback for decks with no renderable slides is preserved, and its export is save-only so it can no longer overwrite the source `.ppt`/`.pptx` with PDF bytes.
+- Loaded PDF.js through a static import shimmed at build time instead of a dynamic `import()` of a blob URL.
+- Updated `omni-viewer-core` to 0.4.
+
+### Removed
+- Deleted the viewer code the core migrations replaced: the archive/CSV/PDF/PowerPoint templates, the vendored PPTX and legacy-PPT binary parsers, the eager archive reader, and the unused HWP document parser (HWP rendering goes through the bundled `rhwp` WebAssembly module). About 17k lines in total, shrinking `main.js`.
+
+### Fixed
+- Archive: `rar`/`7z`/`dmg`/`tar` archives no longer fail to open when Obsidian is launched outside a login shell (for example from the macOS Dock), where the inherited `PATH` omits Homebrew/MacPorts and the `7z`/`tar` binaries could not be found.
+- Themed the toolbars of the office-family and archive viewers, which previously kept the core's hardcoded dark fallback colors instead of the Obsidian theme.
+
+## [0.1.2] - 2026-07-18
+
+### Changed
+- Migrated the CSV and PDF viewers to the shared `omni-viewer-core` rendering engine, mounting the core viewer directly into the view instead of the iframe/template path.
+- CSV: editing now preserves scroll position, sort order, and selection when you save; export uses the system save dialog, matching the PDF viewer and the rest of the plugin.
+- PDF: adding annotations and saving no longer resets the current page, zoom, or scroll.
+- Moved Share and Open shared link from in-view buttons to the viewer toolbar actions.
+- Updated `xlsx` to the official SheetJS distribution (npm publishing stopped at 0.18.5).
+
+## [0.1.1] - 2026-07-10
+
+### Changed
+- Removed `eval`/`new Function` usage to comply with Obsidian plugin guidelines: replaced the `setimmediate`/`lie` dependencies with safe shims and switched the HWP viewer to a readable `hwpViewerMain.js`, deleting the minified webpack bundle.
+- Replaced `any` with explicit types/`unknown` plus runtime type guards across platform, audio engine, GIS, tabular, and message handling code.
+- Used Obsidian's `setCssStyles()` instead of direct `el.style` assignment.
+- Removed `!important` and dead VSCode-only CSS variables from viewer templates.
+- Used Node's `module.builtinModules` instead of the `builtin-modules` package.
+- Gzip-compressed bundled assets to reduce `main.js` size.
+- Removed debug `console.log` statements while keeping error/warning handlers.
+- Cleaned up the command name and manifest/package description.
+
+### Docs
+- Added a privacy policy link for the share feature.
+
+## [0.1.0] - 2026-07-09
+
+### Added
+- Initial Obsidian Community plugin release.
+- Desktop-only viewer plugin for opening many non-markdown file formats directly inside Obsidian.
+- Viewer support for archives, audio, video, images, CSV/TSV, Excel, Word, PowerPoint, PDF, HWP/HWPX, PSD, Parquet, Shapefile, HDF5, MAT, JSONL, YAML, TOML, Mermaid, PlantUML, and automotive/measurement formats.
+- File context menu actions for opening supported files with Omni Viewer when Obsidian has a built-in default viewer.
+- Commands for refreshing the active viewer, sharing the current file, and opening shared links.
+- Embedded viewer templates and bundled assets so the release only needs `main.js`, `manifest.json`, and `styles.css`.
+- MIT license and Obsidian plugin metadata.
+
+### Notes
+- This plugin is desktop-only because several viewers rely on desktop Obsidian and bundled browser/runtime capabilities.
