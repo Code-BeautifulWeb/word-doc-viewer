@@ -14,7 +14,7 @@
     "word",
     "viewer"
   ],
-  "author": "Antigravity",
+  "author": "Raj B. (https://github.com/Code-BeautifulWeb/word-doc-viewer)",
   "license": "MIT",
   "dependencies": {
     "docx-preview": "^0.3.7",

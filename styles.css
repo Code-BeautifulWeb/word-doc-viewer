@@ -1,4 +1,3 @@
-/* Word Document Viewer Container */
 .word-doc-viewer-container {
   display: flex;
   flex-direction: column;
@@ -10,7 +9,6 @@
   box-sizing: border-box;
 }
 
-/* Status overlays (Loading / Errors) */
 .word-doc-viewer-status {
   padding: 2rem;
   text-align: center;
@@ -27,7 +25,6 @@
   color: var(--text-error);
 }
 
-/* Content Area - Uniform equal gap (1rem) on Top, Right, Bottom, and Left */
 .word-doc-viewer-content {
   flex: 1;
   width: 100%;
@@ -46,7 +43,6 @@
   box-sizing: border-box;
 }
 
-/* Full-Width Authentic Paper Page Styling */
 .word-doc-viewer-content .docx-wrapper > section.docx {
   width: 100%;
   box-sizing: border-box;
@@ -59,46 +55,42 @@
   min-height: auto;
 }
 
-/* Ensure all block elements (headers, shaded boxes, callouts, tables, paragraphs) stretch 100% across the paper */
 .word-doc-viewer-content .docx-render section.docx > * {
-  width: 100% !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-  margin-right: 0 !important;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-right: 0;
 }
 
 .word-doc-viewer-content .docx-render p,
 .word-doc-viewer-content .docx-render div,
 .word-doc-viewer-content .docx-render article,
 .word-doc-viewer-content .docx-render table {
-  width: 100% !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-  margin-right: 0 !important;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-right: 0;
 }
 
-/* Direct Text Selection */
 .word-doc-viewer-content .docx-render,
 .word-doc-viewer-content .docx-render * {
   -webkit-user-select: text;
   user-select: text;
 }
 
-/* Responsive Media & Images (Maintain natural aspect ratio) */
 .word-doc-viewer-content .docx-render img {
-  max-width: 100% !important;
-  width: auto !important;
-  height: auto !important;
+  max-width: 100%;
+  width: auto;
+  height: auto;
   display: inline-block;
 }
 
 .word-doc-viewer-content .docx-render table {
-  max-width: 100% !important;
+  max-width: 100%;
   border-collapse: collapse;
   margin: 0.8em 0;
 }
 
-/* Respect Original Paragraph Spacing */
 .word-doc-viewer-content .docx-render p {
   line-height: inherit;
 }
