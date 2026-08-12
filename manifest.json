@@ -2,7 +2,7 @@
   "id": "word-doc-viewer",
   "name": "Word Document Viewer",
   "version": "1.0.0",
-  "minAppVersion": "1.0.0",
+  "minAppVersion": "1.5.7",
   "description": "View Microsoft Word (.docx) documents directly inside Obsidian with full-width layout and accurate formatting.",
   "author": "Raj B.",
   "authorUrl": "https://github.com/Code-BeautifulWeb/word-doc-viewer",

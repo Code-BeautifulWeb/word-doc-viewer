@@ -6713,10 +6713,11 @@ async function renderAsync(data, bodyContainer, styleContainer, userOptions) {
 
 // src/DocxDocumentView.ts
 var WORD_DOCX_VIEW_TYPE = "word-docx-view";
-var DocxDocumentView = class extends import_obsidian.FileView {
+var _DocxDocumentView = class _DocxDocumentView extends import_obsidian.FileView {
   constructor(leaf) {
     super(leaf);
     this.activeBlobUrls = /* @__PURE__ */ new Set();
+    this.renderToken = 0;
     this.documentContainerEl = this.contentEl.createDiv({
       cls: "word-doc-viewer-container"
     });
@@ -6743,6 +6744,7 @@ var DocxDocumentView = class extends import_obsidian.FileView {
     await super.onClose();
   }
   async renderDocument(file) {
+    const token = ++this.renderToken;
     this.clearDocumentState();
     const loadingEl = this.documentContainerEl.createDiv({
       cls: "word-doc-viewer-status word-doc-viewer-loading",
@@ -6750,25 +6752,21 @@ var DocxDocumentView = class extends import_obsidian.FileView {
     });
     try {
       const arrayBuffer = await this.app.vault.readBinary(file);
+      if (token !== this.renderToken)
+        return;
       loadingEl.remove();
       const renderTarget = this.documentContainerEl.createDiv({
         cls: "word-doc-viewer-content"
       });
-      const renderOptions = {
-        className: "docx-render",
-        inWrapper: true,
-        ignoreWidth: true,
-        ignoreHeight: true,
-        ignoreFonts: false,
-        breakPages: true,
-        useBase64URL: false,
-        trimXmlDeclaration: true
-      };
-      await renderAsync(arrayBuffer, renderTarget, void 0, renderOptions);
+      await renderAsync(arrayBuffer, renderTarget, void 0, _DocxDocumentView.RENDER_OPTIONS);
+      if (token !== this.renderToken)
+        return;
       this.normalizeRenderedElementWidths(renderTarget);
       this.fixBulletGlyphs(renderTarget);
       this.trackEmbeddedBlobUrls(renderTarget);
     } catch (error) {
+      if (token !== this.renderToken)
+        return;
       this.documentContainerEl.empty();
       const errorEl = this.documentContainerEl.createDiv({
         cls: "word-doc-viewer-status word-doc-viewer-error"
@@ -6781,7 +6779,7 @@ var DocxDocumentView = class extends import_obsidian.FileView {
   }
   normalizeRenderedElementWidths(root) {
     const blockElements = root.querySelectorAll(
-      "section.docx > p, section.docx > div, section.docx > table, section.docx > article"
+      "section.docx p, section.docx div, section.docx table, section.docx article"
     );
     blockElements.forEach((el) => {
       if (el.style.width && el.tagName !== "IMG") {
@@ -6793,11 +6791,12 @@ var DocxDocumentView = class extends import_obsidian.FileView {
     });
   }
   fixBulletGlyphs(root) {
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    const doc = root.ownerDocument || document;
+    const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
     let node;
     while (node = walker.nextNode()) {
-      if (node.nodeValue) {
-        node.nodeValue = node.nodeValue.replace(/[\uF000-\uF0FF]/g, "\u2022");
+      if (node.nodeValue && /\uF0B7|\uF0A7|\uF0D8/.test(node.nodeValue)) {
+        node.nodeValue = node.nodeValue.replace(/\uF0B7|\uF0A7|\uF0D8/g, "\u2022");
       }
     }
   }
@@ -6810,6 +6809,7 @@ var DocxDocumentView = class extends import_obsidian.FileView {
     });
   }
   clearDocumentState() {
+    this.renderToken++;
     for (const url of this.activeBlobUrls) {
       URL.revokeObjectURL(url);
     }
@@ -6817,6 +6817,17 @@ var DocxDocumentView = class extends import_obsidian.FileView {
     this.documentContainerEl.empty();
   }
 };
+_DocxDocumentView.RENDER_OPTIONS = {
+  className: "docx-render",
+  inWrapper: true,
+  ignoreWidth: true,
+  ignoreHeight: true,
+  ignoreFonts: false,
+  breakPages: true,
+  useBase64URL: false,
+  trimXmlDeclaration: true
+};
+var DocxDocumentView = _DocxDocumentView;
 
 // src/main.ts
 var WordDocumentViewerPlugin = class extends import_obsidian2.Plugin {
@@ -6828,6 +6839,7 @@ var WordDocumentViewerPlugin = class extends import_obsidian2.Plugin {
     this.registerExtensions(["docx"], WORD_DOCX_VIEW_TYPE);
   }
   onunload() {
+    this.app.workspace.detachLeavesOfType(WORD_DOCX_VIEW_TYPE);
   }
 };
 /*! Bundled license information:

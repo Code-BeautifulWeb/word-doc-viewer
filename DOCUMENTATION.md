@@ -12,6 +12,8 @@ The **Word Document Viewer** plugin is a lightweight, view-only extension design
 - **Full Content Width**: Forces block-level elements (headings, shaded background callouts, list boxes, tables, paragraphs) to stretch 100% across the document paper, eliminating right-side whitespace gaps.
 - **Formatting Fidelity**: Preserves OOXML paragraph spacing (`w:spacing`), line height, font styles, headings, tables, embedded images, and usable hyperlinks.
 - **Native Interactions**: Supports browser-native text selection (`user-select: text`), text copying, link navigation, and vertical scrolling.
+- **Race Condition Protection**: Uses a render token counter (`renderToken`) to guard against rapid file switching race conditions.
+- **Targeted Bullet Normalization**: Normalizes specific Word Private Use Area bullet glyphs (`\uF0B7`, `\uF0A7`, `\uF0D8`) to standard Unicode bullet points (`•`) without corrupting checkboxes or Wingdings arrows.
 - **Memory Safety**: Tracks all `blob:` URLs generated for embedded document images and revokes them (`URL.revokeObjectURL`) on view unload or file change.
 - **Zero Dependency Bloat**: Uses only `docx-preview` (0.3.7) and `jszip` (3.10.1). Total production bundle size is ~290 KB (`main.js`).
 
@@ -49,7 +51,7 @@ The plugin follows a modular, standard Obsidian API architecture:
                           │   renderAsync() API       │
                           └─────────────┬─────────────┘
                                         │
-                 DOM Normalization & Bullet Glyph Pass
+                 Descendant Normalization & Bullet Glyph Pass
                                         │
                                         ▼
                           ┌───────────────────────────┐
@@ -60,15 +62,11 @@ The plugin follows a modular, standard Obsidian API architecture:
 
 ### 2.2 Integration & View Lifecycle
 1. **View Registration**: `WordDocumentViewerPlugin` registers `DocxDocumentView` (`WORD_DOCX_VIEW_TYPE = "word-docx-view"`) and binds `.docx` files via `this.registerExtensions(["docx"], WORD_DOCX_VIEW_TYPE)`.
-2. **File Loading**: When a `.docx` file is selected in Obsidian's File Explorer, `DocxDocumentView.onLoadFile(file)` reads the binary content as an `ArrayBuffer` using `app.vault.readBinary(file)`.
-3. **DOM Rendering**: `renderAsync()` parses the `ArrayBuffer` into structural HTML (`section.docx`, `p`, `table`, `img`, `span`).
-4. **Width Normalization & Bullet Repair**: `normalizeRenderedElementWidths()` strips hardcoded inline pixel widths/margins, and `fixBulletGlyphs()` converts Private Use Area bullet symbols (`\uF0B7`) into standard Unicode bullets (`•`).
-5. **Resource Cleanup**: `clearDocumentState()` revokes all retained `blob:` image URLs and empties DOM nodes during `onUnloadFile()` and `onClose()`.
-
-### 2.3 Fluid Responsive Styling & Layout Engine
-- **`ignoreWidth: true` & `ignoreHeight: true`**: Passed in `docx-preview`'s options to prevent the engine from outputting inline `style="width: 816px;"` on the paper container.
-- **Vivid Contrast & Font Crispness**: Forces true black `#000000` text base color, `-webkit-font-smoothing: subpixel-antialiased`, and `opacity: 1` on text spans and headers to eliminate faint/dull text rendering.
-- **Tight Line & Paragraph Spacing**: Resets default browser `1em` paragraph margins (`p { margin: 0; line-height: 1.35; }`), eliminating extra gaps between list items and table rows.
+2. **File Loading & Race Prevention**: When a `.docx` file is selected, `DocxDocumentView.onLoadFile(file)` increments `renderToken` and reads the binary content. If a new file is opened before reading completes, the stale task aborts safely.
+3. **DOM Rendering**: `renderAsync()` parses the `ArrayBuffer` into structural HTML.
+4. **Descendant Width Normalization**: `normalizeRenderedElementWidths()` targets nested `section.docx` descendant blocks (`p`, `div`, `table`, `article`) to strip hardcoded inline widths and right margins.
+5. **Targeted Bullet Glyph Repair**: `fixBulletGlyphs()` uses `root.ownerDocument.createTreeWalker()` to replace targeted Private Use Area bullet symbols (`\uF0B7`, `\uF0A7`, `\uF0D8`) with standard Unicode bullets (`•`).
+6. **Resource & Leaf Cleanup**: `clearDocumentState()` revokes all retained `blob:` image URLs and increments `renderToken`. On plugin unload (`onunload()`), `app.workspace.detachLeavesOfType(WORD_DOCX_VIEW_TYPE)` cleanly detaches open leaves.
 
 ---
 
@@ -89,7 +87,9 @@ export default class WordDocumentViewerPlugin extends Plugin {
     this.registerExtensions(["docx"], WORD_DOCX_VIEW_TYPE);
   }
 
-  onunload(): void {}
+  onunload(): void {
+    this.app.workspace.detachLeavesOfType(WORD_DOCX_VIEW_TYPE);
+  }
 }
 ```
 
@@ -103,6 +103,18 @@ export const WORD_DOCX_VIEW_TYPE = "word-docx-view";
 export class DocxDocumentView extends FileView {
   private activeBlobUrls: Set<string> = new Set();
   private documentContainerEl: HTMLElement;
+  private renderToken = 0;
+
+  private static readonly RENDER_OPTIONS: Partial<Options> = {
+    className: "docx-render",
+    inWrapper: true,
+    ignoreWidth: true,
+    ignoreHeight: true,
+    ignoreFonts: false,
+    breakPages: true,
+    useBase64URL: false,
+    trimXmlDeclaration: true,
+  };
 
   constructor(leaf: WorkspaceLeaf) {
     super(leaf);
@@ -139,6 +151,7 @@ export class DocxDocumentView extends FileView {
   }
 
   private async renderDocument(file: TFile): Promise<void> {
+    const token = ++this.renderToken;
     this.clearDocumentState();
 
     const loadingEl = this.documentContainerEl.createDiv({
@@ -148,29 +161,22 @@ export class DocxDocumentView extends FileView {
 
     try {
       const arrayBuffer = await this.app.vault.readBinary(file);
+      if (token !== this.renderToken) return;
+
       loadingEl.remove();
 
       const renderTarget = this.documentContainerEl.createDiv({
         cls: "word-doc-viewer-content",
       });
 
-      const renderOptions: Partial<Options> = {
-        className: "docx-render",
-        inWrapper: true,
-        ignoreWidth: true,
-        ignoreHeight: true,
-        ignoreFonts: false,
-        breakPages: true,
-        useBase64URL: false,
-        trimXmlDeclaration: true,
-      };
-
-      await renderAsync(arrayBuffer, renderTarget, undefined, renderOptions);
+      await renderAsync(arrayBuffer, renderTarget, undefined, DocxDocumentView.RENDER_OPTIONS);
+      if (token !== this.renderToken) return;
 
       this.normalizeRenderedElementWidths(renderTarget);
       this.fixBulletGlyphs(renderTarget);
       this.trackEmbeddedBlobUrls(renderTarget);
     } catch (error) {
+      if (token !== this.renderToken) return;
       this.documentContainerEl.empty();
       const errorEl = this.documentContainerEl.createDiv({
         cls: "word-doc-viewer-status word-doc-viewer-error",
@@ -184,7 +190,7 @@ export class DocxDocumentView extends FileView {
 
   private normalizeRenderedElementWidths(root: HTMLElement): void {
     const blockElements = root.querySelectorAll<HTMLElement>(
-      "section.docx > p, section.docx > div, section.docx > table, section.docx > article"
+      "section.docx p, section.docx div, section.docx table, section.docx article"
     );
     blockElements.forEach((el) => {
       if (el.style.width && el.tagName !== "IMG") {
@@ -197,11 +203,12 @@ export class DocxDocumentView extends FileView {
   }
 
   private fixBulletGlyphs(root: HTMLElement): void {
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    const doc = root.ownerDocument || document;
+    const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
     let node: Node | null;
     while ((node = walker.nextNode())) {
-      if (node.nodeValue) {
-        node.nodeValue = node.nodeValue.replace(/[\uF000-\uF0FF]/g, "•");
+      if (node.nodeValue && /\uF0B7|\uF0A7|\uF0D8/.test(node.nodeValue)) {
+        node.nodeValue = node.nodeValue.replace(/\uF0B7|\uF0A7|\uF0D8/g, "•");
       }
     }
   }
@@ -216,6 +223,7 @@ export class DocxDocumentView extends FileView {
   }
 
   private clearDocumentState(): void {
+    this.renderToken++;
     for (const url of this.activeBlobUrls) {
       URL.revokeObjectURL(url);
     }
@@ -276,66 +284,52 @@ export class DocxDocumentView extends FileView {
   width: 100%;
   box-sizing: border-box;
   background-color: #ffffff;
-  color: #000000;
+  color: #111111;
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   padding: 2.5rem 3rem;
   margin: 0;
   min-height: auto;
-  -webkit-font-smoothing: subpixel-antialiased;
-  text-rendering: optimizeLegibility;
 }
 
 .word-doc-viewer-content .docx-render section.docx > * {
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  margin-right: 0;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  margin-right: 0 !important;
 }
 
 .word-doc-viewer-content .docx-render p,
 .word-doc-viewer-content .docx-render div,
 .word-doc-viewer-content .docx-render article,
 .word-doc-viewer-content .docx-render table {
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  margin-right: 0;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  margin-right: 0 !important;
 }
 
 .word-doc-viewer-content .docx-render,
 .word-doc-viewer-content .docx-render * {
   -webkit-user-select: text;
   user-select: text;
-  opacity: 1;
 }
 
 .word-doc-viewer-content .docx-render img {
-  max-width: 100%;
-  width: auto;
-  height: auto;
+  max-width: 100% !important;
+  width: auto !important;
+  height: auto !important;
   display: inline-block;
 }
 
 .word-doc-viewer-content .docx-render table {
-  max-width: 100%;
+  max-width: 100% !important;
   border-collapse: collapse;
-  margin: 0.3em 0;
+  margin: 0.8em 0;
 }
 
 .word-doc-viewer-content .docx-render p {
-  margin: 0;
-  line-height: 1.35;
-}
-
-.word-doc-viewer-content .docx-render h1,
-.word-doc-viewer-content .docx-render h2,
-.word-doc-viewer-content .docx-render h3,
-.word-doc-viewer-content .docx-render h4,
-.word-doc-viewer-content .docx-render h5,
-.word-doc-viewer-content .docx-render h6 {
-  opacity: 1;
-  font-family: inherit;
+  line-height: inherit;
 }
 ```
 
