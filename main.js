@@ -6765,6 +6765,7 @@ var DocxDocumentView = class extends import_obsidian.FileView {
         trimXmlDeclaration: true
       };
       await renderAsync(arrayBuffer, renderTarget, void 0, renderOptions);
+      this.normalizeRenderedElementWidths(renderTarget);
       this.trackEmbeddedBlobUrls(renderTarget);
     } catch (error) {
       this.documentContainerEl.empty();
@@ -6776,6 +6777,19 @@ var DocxDocumentView = class extends import_obsidian.FileView {
         text: error instanceof Error ? error.message : String(error)
       });
     }
+  }
+  normalizeRenderedElementWidths(root) {
+    const blockElements = root.querySelectorAll(
+      "section.docx > p, section.docx > div, section.docx > table, section.docx > article"
+    );
+    blockElements.forEach((el) => {
+      if (el.style.width && el.tagName !== "IMG") {
+        el.style.width = "100%";
+      }
+      if (el.style.marginRight) {
+        el.style.marginRight = "0px";
+      }
+    });
   }
   trackEmbeddedBlobUrls(root) {
     const imgElements = root.querySelectorAll("img[src^='blob:']");

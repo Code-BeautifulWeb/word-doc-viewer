@@ -73,6 +73,7 @@ export class DocxDocumentView extends FileView {
 
       await renderAsync(arrayBuffer, renderTarget, undefined, renderOptions);
 
+      this.normalizeRenderedElementWidths(renderTarget);
       this.trackEmbeddedBlobUrls(renderTarget);
     } catch (error) {
       this.documentContainerEl.empty();
@@ -84,6 +85,20 @@ export class DocxDocumentView extends FileView {
         text: error instanceof Error ? error.message : String(error),
       });
     }
+  }
+
+  private normalizeRenderedElementWidths(root: HTMLElement): void {
+    const blockElements = root.querySelectorAll<HTMLElement>(
+      "section.docx > p, section.docx > div, section.docx > table, section.docx > article"
+    );
+    blockElements.forEach((el) => {
+      if (el.style.width && el.tagName !== "IMG") {
+        el.style.width = "100%";
+      }
+      if (el.style.marginRight) {
+        el.style.marginRight = "0px";
+      }
+    });
   }
 
   private trackEmbeddedBlobUrls(root: HTMLElement): void {

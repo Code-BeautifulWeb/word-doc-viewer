@@ -54,9 +54,27 @@
   color: #111111;
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-  padding: 2rem 2.5rem;
+  padding: 2.5rem 3rem;
   margin: 0;
   min-height: auto;
+}
+
+/* Ensure all block elements (headers, shaded boxes, callouts, tables, paragraphs) stretch 100% across the paper */
+.word-doc-viewer-content .docx-render section.docx > * {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  margin-right: 0 !important;
+}
+
+.word-doc-viewer-content .docx-render p,
+.word-doc-viewer-content .docx-render div,
+.word-doc-viewer-content .docx-render article,
+.word-doc-viewer-content .docx-render table {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  margin-right: 0 !important;
 }
 
 /* Direct Text Selection */
@@ -66,15 +84,16 @@
   user-select: text;
 }
 
-/* Responsive Media, Tables, & Images */
+/* Responsive Media & Images (Maintain natural aspect ratio) */
 .word-doc-viewer-content .docx-render img {
-  max-width: 100%;
-  height: auto;
+  max-width: 100% !important;
+  width: auto !important;
+  height: auto !important;
   display: inline-block;
 }
 
 .word-doc-viewer-content .docx-render table {
-  max-width: 100%;
+  max-width: 100% !important;
   border-collapse: collapse;
   margin: 0.8em 0;
 }
