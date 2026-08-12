@@ -151,8 +151,8 @@ export class DocxDocumentView extends FileView {
   }
 
   private async renderDocument(file: TFile): Promise<void> {
-    const token = ++this.renderToken;
     this.clearDocumentState();
+    const token = ++this.renderToken;
 
     const loadingEl = this.documentContainerEl.createDiv({
       cls: "word-doc-viewer-status word-doc-viewer-loading",
@@ -170,11 +170,11 @@ export class DocxDocumentView extends FileView {
       });
 
       await renderAsync(arrayBuffer, renderTarget, undefined, DocxDocumentView.RENDER_OPTIONS);
+      this.trackEmbeddedBlobUrls(renderTarget);
       if (token !== this.renderToken) return;
 
       this.normalizeRenderedElementWidths(renderTarget);
       this.fixBulletGlyphs(renderTarget);
-      this.trackEmbeddedBlobUrls(renderTarget);
     } catch (error) {
       if (token !== this.renderToken) return;
       this.documentContainerEl.empty();

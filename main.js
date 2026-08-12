@@ -6744,8 +6744,8 @@ var _DocxDocumentView = class _DocxDocumentView extends import_obsidian.FileView
     await super.onClose();
   }
   async renderDocument(file) {
-    const token = ++this.renderToken;
     this.clearDocumentState();
+    const token = ++this.renderToken;
     const loadingEl = this.documentContainerEl.createDiv({
       cls: "word-doc-viewer-status word-doc-viewer-loading",
       text: `Loading "${file.name}"...`
@@ -6759,11 +6759,11 @@ var _DocxDocumentView = class _DocxDocumentView extends import_obsidian.FileView
         cls: "word-doc-viewer-content"
       });
       await renderAsync(arrayBuffer, renderTarget, void 0, _DocxDocumentView.RENDER_OPTIONS);
+      this.trackEmbeddedBlobUrls(renderTarget);
       if (token !== this.renderToken)
         return;
       this.normalizeRenderedElementWidths(renderTarget);
       this.fixBulletGlyphs(renderTarget);
-      this.trackEmbeddedBlobUrls(renderTarget);
     } catch (error) {
       if (token !== this.renderToken)
         return;
