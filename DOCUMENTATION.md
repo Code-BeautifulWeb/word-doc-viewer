@@ -49,7 +49,7 @@ The plugin follows a modular, standard Obsidian API architecture:
                           │   renderAsync() API       │
                           └─────────────┬─────────────┘
                                         │
-                 DOM Normalization & Blob URL Tracking Pass
+                 DOM Normalization & Bullet Glyph Pass
                                         │
                                         ▼
                           ┌───────────────────────────┐
@@ -62,13 +62,13 @@ The plugin follows a modular, standard Obsidian API architecture:
 1. **View Registration**: `WordDocumentViewerPlugin` registers `DocxDocumentView` (`WORD_DOCX_VIEW_TYPE = "word-docx-view"`) and binds `.docx` files via `this.registerExtensions(["docx"], WORD_DOCX_VIEW_TYPE)`.
 2. **File Loading**: When a `.docx` file is selected in Obsidian's File Explorer, `DocxDocumentView.onLoadFile(file)` reads the binary content as an `ArrayBuffer` using `app.vault.readBinary(file)`.
 3. **DOM Rendering**: `renderAsync()` parses the `ArrayBuffer` into structural HTML (`section.docx`, `p`, `table`, `img`, `span`).
-4. **Width Normalization**: `normalizeRenderedElementWidths()` strips hardcoded inline pixel widths/margins inserted by `docx-preview`.
+4. **Width Normalization & Bullet Repair**: `normalizeRenderedElementWidths()` strips hardcoded inline pixel widths/margins, and `fixBulletGlyphs()` converts Private Use Area bullet symbols (`\uF0B7`) into standard Unicode bullets (`•`).
 5. **Resource Cleanup**: `clearDocumentState()` revokes all retained `blob:` image URLs and empties DOM nodes during `onUnloadFile()` and `onClose()`.
 
 ### 2.3 Fluid Responsive Styling & Layout Engine
 - **`ignoreWidth: true` & `ignoreHeight: true`**: Passed in `docx-preview`'s options to prevent the engine from outputting inline `style="width: 816px;"` on the paper container.
-- **Clean Specificity (Zero `!important` Hacks)**: Standard CSS rules control the container, paper card, and inner element alignment cleanly without needing CSS specificity overrides.
-- **Uniform Edge Gaps**: The outer container (`.word-doc-viewer-content`) specifies `padding: 1rem;` (16px), guaranteeing identical top, right, bottom, and left outer margins around the white paper card.
+- **Vivid Contrast & Font Crispness**: Forces true black `#000000` text base color, `-webkit-font-smoothing: subpixel-antialiased`, and `opacity: 1` on text spans and headers to eliminate faint/dull text rendering.
+- **Tight Line & Paragraph Spacing**: Resets default browser `1em` paragraph margins (`p { margin: 0; line-height: 1.35; }`), eliminating extra gaps between list items and table rows.
 
 ---
 
@@ -79,9 +79,6 @@ The plugin follows a modular, standard Obsidian API architecture:
 import { Plugin } from "obsidian";
 import { DocxDocumentView, WORD_DOCX_VIEW_TYPE } from "./DocxDocumentView";
 
-/**
- * Obsidian Plugin entry point for Word Document Viewer.
- */
 export default class WordDocumentViewerPlugin extends Plugin {
   async onload(): Promise<void> {
     this.registerView(
@@ -92,9 +89,7 @@ export default class WordDocumentViewerPlugin extends Plugin {
     this.registerExtensions(["docx"], WORD_DOCX_VIEW_TYPE);
   }
 
-  onunload(): void {
-    // Obsidian automatically unregisters views and extensions registered via registerView / registerExtensions
-  }
+  onunload(): void {}
 }
 ```
 
@@ -105,9 +100,6 @@ import { renderAsync, type Options } from "docx-preview";
 
 export const WORD_DOCX_VIEW_TYPE = "word-docx-view";
 
-/**
- * View-only document leaf for rendering Microsoft Word (.docx) files natively inside Obsidian.
- */
 export class DocxDocumentView extends FileView {
   private activeBlobUrls: Set<string> = new Set();
   private documentContainerEl: HTMLElement;
@@ -176,6 +168,7 @@ export class DocxDocumentView extends FileView {
       await renderAsync(arrayBuffer, renderTarget, undefined, renderOptions);
 
       this.normalizeRenderedElementWidths(renderTarget);
+      this.fixBulletGlyphs(renderTarget);
       this.trackEmbeddedBlobUrls(renderTarget);
     } catch (error) {
       this.documentContainerEl.empty();
@@ -203,6 +196,16 @@ export class DocxDocumentView extends FileView {
     });
   }
 
+  private fixBulletGlyphs(root: HTMLElement): void {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let node: Node | null;
+    while ((node = walker.nextNode())) {
+      if (node.nodeValue) {
+        node.nodeValue = node.nodeValue.replace(/[\uF000-\uF0FF]/g, "•");
+      }
+    }
+  }
+
   private trackEmbeddedBlobUrls(root: HTMLElement): void {
     const imgElements = root.querySelectorAll<HTMLImageElement>("img[src^='blob:']");
     imgElements.forEach((img) => {
@@ -224,7 +227,6 @@ export class DocxDocumentView extends FileView {
 
 ### 3.3 Style Sheet — `styles.css`
 ```css
-/* Word Document Viewer Container */
 .word-doc-viewer-container {
   display: flex;
   flex-direction: column;
@@ -236,7 +238,6 @@ export class DocxDocumentView extends FileView {
   box-sizing: border-box;
 }
 
-/* Status overlays (Loading / Errors) */
 .word-doc-viewer-status {
   padding: 2rem;
   text-align: center;
@@ -253,7 +254,6 @@ export class DocxDocumentView extends FileView {
   color: var(--text-error);
 }
 
-/* Content Area - Uniform equal gap (1rem / 16px) on Top, Right, Bottom, and Left */
 .word-doc-viewer-content {
   flex: 1;
   width: 100%;
@@ -272,20 +272,20 @@ export class DocxDocumentView extends FileView {
   box-sizing: border-box;
 }
 
-/* Full-Width Authentic Paper Page Styling */
 .word-doc-viewer-content .docx-wrapper > section.docx {
   width: 100%;
   box-sizing: border-box;
   background-color: #ffffff;
-  color: #111111;
+  color: #000000;
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   padding: 2.5rem 3rem;
   margin: 0;
   min-height: auto;
+  -webkit-font-smoothing: subpixel-antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Ensure all block elements (headers, shaded boxes, callouts, tables, paragraphs) stretch 100% across the paper */
 .word-doc-viewer-content .docx-render section.docx > * {
   width: 100%;
   max-width: 100%;
@@ -303,14 +303,13 @@ export class DocxDocumentView extends FileView {
   margin-right: 0;
 }
 
-/* Direct Text Selection */
 .word-doc-viewer-content .docx-render,
 .word-doc-viewer-content .docx-render * {
   -webkit-user-select: text;
   user-select: text;
+  opacity: 1;
 }
 
-/* Responsive Media & Images (Maintain natural aspect ratio) */
 .word-doc-viewer-content .docx-render img {
   max-width: 100%;
   width: auto;
@@ -321,12 +320,22 @@ export class DocxDocumentView extends FileView {
 .word-doc-viewer-content .docx-render table {
   max-width: 100%;
   border-collapse: collapse;
-  margin: 0.8em 0;
+  margin: 0.3em 0;
 }
 
-/* Respect Original Paragraph Spacing */
 .word-doc-viewer-content .docx-render p {
-  line-height: inherit;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.word-doc-viewer-content .docx-render h1,
+.word-doc-viewer-content .docx-render h2,
+.word-doc-viewer-content .docx-render h3,
+.word-doc-viewer-content .docx-render h4,
+.word-doc-viewer-content .docx-render h5,
+.word-doc-viewer-content .docx-render h6 {
+  opacity: 1;
+  font-family: inherit;
 }
 ```
 

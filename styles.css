@@ -47,12 +47,14 @@
   width: 100%;
   box-sizing: border-box;
   background-color: #ffffff;
-  color: #111111;
+  color: #000000;
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   padding: 2.5rem 3rem;
   margin: 0;
   min-height: auto;
+  -webkit-font-smoothing: subpixel-antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 .word-doc-viewer-content .docx-render section.docx > * {
@@ -76,6 +78,7 @@
 .word-doc-viewer-content .docx-render * {
   -webkit-user-select: text;
   user-select: text;
+  opacity: 1;
 }
 
 .word-doc-viewer-content .docx-render img {
@@ -88,9 +91,22 @@
 .word-doc-viewer-content .docx-render table {
   max-width: 100%;
   border-collapse: collapse;
-  margin: 0.8em 0;
+  margin: 0.3em 0;
 }
 
+/* Reset base paragraph margins to prevent double-spacing while preserving Word inline spacing */
 .word-doc-viewer-content .docx-render p {
-  line-height: inherit;
+  margin: 0;
+  line-height: 1.35;
+}
+
+/* Preserve crisp contrast for headings and text spans */
+.word-doc-viewer-content .docx-render h1,
+.word-doc-viewer-content .docx-render h2,
+.word-doc-viewer-content .docx-render h3,
+.word-doc-viewer-content .docx-render h4,
+.word-doc-viewer-content .docx-render h5,
+.word-doc-viewer-content .docx-render h6 {
+  opacity: 1;
+  font-family: inherit;
 }
